@@ -1,3 +1,4 @@
+import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -8,49 +9,64 @@ sns.set(style='whitegrid', palette='muted')
 
 # Function to process and plot each scenario
 def analyze_scenario(filename, title):
-    print(f"\n{'='*30}\nScenario: {title}\n{'='*30}")
+    st.markdown(f"### Scenario: {title}")
     
     # Load data
     df = pd.read_excel(filename)
     
-    # Rename columns if needed
+    # Rename columns
     df.columns = ['x0', 'y0', 'x1', 'y1']
     
     # Plot cumulative sales
-    plt.figure(figsize=(10, 5))
-    plt.plot(df['x0'], df['y0'], label='Store 0 (Boosted)', linewidth=2)
-    plt.plot(df['x1'], df['y1'], label='Store 1 (Baseline)', linewidth=2, linestyle='--')
-    plt.title(f'Cumulative Sales: {title}')
-    plt.xlabel('Days Passed')
-    plt.ylabel('Cumulative Sales')
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(df['x0'], df['y0'], label='Store 0 (Boosted)', linewidth=2)
+    ax.plot(df['x1'], df['y1'], label='Store 1 (Baseline)', linewidth=2, linestyle='--')
+    ax.set_title(f'Cumulative Sales: {title}')
+    ax.set_xlabel('Days Passed')
+    ax.set_ylabel('Cumulative Sales')
+    ax.legend()
+    st.pyplot(fig)
     
     # Final cumulative sales
     final_store0 = df['y0'].iloc[-1]
     final_store1 = df['y1'].iloc[-1]
-    print(f"Final Cumulative Sales:")
-    print(f"Store 0 (Boosted): {final_store0:.2f}")
-    print(f"Store 1 (Baseline): {final_store1:.2f}")
     
-    # % Difference
+    st.write("**Final Cumulative Sales:**")
+    st.write(f"- Store 0 (Boosted): {final_store0:.2f}")
+    st.write(f"- Store 1 (Baseline): {final_store1:.2f}")
+    
     if final_store1 > 0:
         perc_diff = ((final_store0 - final_store1) / final_store1) * 100
-        print(f"→ Store 0 outperformed Store 1 by {perc_diff:.2f}%\n")
+        st.success(f"→ Store 0 outperformed Store 1 by **{perc_diff:.2f}%**")
     else:
-        print("→ Store 1 has 0 sales — no valid percentage comparison.\n")
-
-    # Optional: Paired t-test on day-by-day cumulative sales
+        st.warning("→ Store 1 has 0 sales — no valid percentage comparison.")
+    
+    # Paired t-test
     stat, p_value = ttest_rel(df['y0'], df['y1'])
-    print("Paired t-test on daily cumulative sales:")
-    print(f"t-statistic = {stat:.4f}, p-value = {p_value:.4f}")
+    st.write("**Paired t-test on daily cumulative sales:**")
+    st.write(f"- t-statistic = {stat:.4f}")
+    st.write(f"- p-value = {p_value:.4f}")
+    
     if p_value < 0.05:
-        print("→ Statistically significant difference between stores (p < 0.05)\n")
+        st.success("→ Statistically significant difference (p < 0.05)")
     else:
-        print("→ No statistically significant difference (p ≥ 0.05)\n")
+        st.info("→ No statistically significant difference (p ≥ 0.05)")
 
-# Run the function for all 3 scenarios
-analyze_scenario('NewStore_store-2plot.xlsx', 'Marketing-Driven Strategy (New Store)')
-analyze_scenario('LuxStore_store-2plot.xlsx', 'Service-Oriented Strategy (Luxury/Niche)')
-analyze_scenario('GroceryStore_store-2plot.xlsx', 'Product Variety Focused Strategy (High-Traffic)')
+# Streamlit App Title
+st.title("Retail Store Strategy Simulation Results")
+
+# File Upload
+uploaded_files = st.file_uploader("Upload 3 scenario Excel files", accept_multiple_files=True)
+
+scenario_titles = [
+    'Marketing-Driven Strategy (New Store)',
+    'Service-Oriented Strategy (Luxury/Niche)',
+    'Product Variety Focused Strategy (High-Traffic)'
+]
+
+# Run analysis if 3 files uploaded
+if uploaded_files and len(uploaded_files) == 3:
+    for file, title in zip(uploaded_files, scenario_titles):
+        analyze_scenario(file, title)
+elif uploaded_files:
+    st.warning("Please upload all 3 scenario files.")
